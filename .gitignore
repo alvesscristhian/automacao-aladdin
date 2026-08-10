@@ -2,3 +2,5 @@
 node_modules/
 dist/
 pdf
+auth_info_multi.json
+/pdf/*.pdf
