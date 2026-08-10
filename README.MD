@@ -1,222 +1,108 @@
-# Explicação da Arquitetura do Projeto
+# Automação Aladdin
 
 ## Visão Geral
 
-O fluxo completo do sistema é o seguinte:
+Este projeto recebe uma lista enviada por WhatsApp, processa as linhas, gera um PDF e envia o arquivo de volta ao remetente.
+
+O fluxo é:
 
 ```text
 Mensagem do WhatsApp
-
 ↓
-
 processList()
-
 ↓
-
 parseMessage()
-
 ↓
-
 sortNumbers()
-
 ↓
-
 calculateTotal()
-
 ↓
-
 generatePDF()
-
 ↓
-
-Retorna o PDF gerado
+enviar PDF de volta pelo WhatsApp
 ```
 
-Cada função possui apenas uma responsabilidade. Isso segue um dos princípios mais importantes do desenvolvimento de software: o Single Responsibility Principle (Princípio da Responsabilidade Única).
+## Estrutura principal
 
----
+- `src/controllers/listController.js` — orquestra o processamento da lista
+- `src/services/parserService.js` — converte o texto em objetos
+- `src/services/sortService.js` — ordena números
+- `src/services/totalService.js` — calcula total
+- `src/services/pdfService.js` — gera o PDF
+- `src/services/whatsappService.js` — integra com `@whiskeysockets/baileys`
 
-# 1 - parserService.js
+## Requisitos
 
-Suponha que o usuário envie a seguinte mensagem:
+- Node.js compatível com a versão usada no projeto
+- Dependências instaladas com `npm install`
+
+## Como rodar
+
+1. Instale as dependências:
+
+```bash
+npm install
+```
+
+2. Inicie o bot:
+
+```bash
+npm start
+```
+
+3. Abra o terminal e escaneie o QR code exibido com o WhatsApp do número que irá receber as mensagens.
+
+> Após a primeira autenticação bem-sucedida, o estado fica salvo em `auth_info` e você não precisará escanear o QR novamente.
+
+## Mensagem de teste
+
+Envie para o número conectado uma mensagem no formato:
 
 ```text
-Lista número 05
+Lista número 01
 
 Centena
-
-306*** 3,00 reais
 304*** 3,00 reais
-305*** 3,00 reais
+305*** 4,50 reais
 
 Milhar
-
 7945*** 10,00 reais
 6919*** 10,00 reais
 ```
 
-O JavaScript recebe tudo isso como uma única string:
+## O que acontece depois
 
-```javascript
-const message = `
-Lista número 05
+- o bot lê a mensagem recebida via WhatsApp
+- processa o texto usando `processList()` e gera os dados estruturados
+- calcula o valor total
+- gera o PDF em `pdf/lista-01.pdf`
+- envia o PDF de volta como documento pelo WhatsApp
+- inclui no caption o valor total calculado
 
-Centena
-...
-`;
-```
+## Logs úteis
 
-Trabalhar diretamente com uma string grande não é muito prático, então utilizamos um parser.
+- o bot mostra apenas logs próprios para manter a saída limpa
+- sincronização de histórico antigo é ignorada
+- a pasta `auth_info` guarda o estado de login
+- em logout, `auth_info` é removida automaticamente para forçar novo QR
 
-## O que ele faz?
+O bot usa logs próprios para manter a saída limpa e informativa:
 
-Transforma isso:
+- `[Aladdin WhatsApp] QR code gerado...`
+- `[Aladdin WhatsApp] Aguardando leitura do QR...`
+- `[Aladdin WhatsApp] Conectando ao WhatsApp...`
+- `[Aladdin WhatsApp] WhatsApp conectado com sucesso.`
+- `[Aladdin WhatsApp] PDF enviado para <jid> | Total: R$ XX.XX`
 
-```text
-Lista número 05
+## Observações
 
-Centena
+- A pasta `auth_info` contém o estado de autenticação do WhatsApp.
+- Em caso de logout, o diretório é removido automaticamente para forçar um novo login.
+- O projeto foi configurado para não sincronizar histórico antigo.
 
-304*** 3,00 reais
-```
+## Teste manual sem WhatsApp
 
-nisso:
-
-```javascript
-{
-    lista: 5,
-
-    centena: [
-        {
-            number: "304***",
-            value: 3
-        }
-    ],
-
-    milhar: []
-}
-```
-
----
-
-## Entendendo esse trecho
-
-```javascript
-const lines = message
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => line !== "");
-```
-
-### split()
-
-Transforma a mensagem em um array:
-
-```javascript
-[
-    "Lista número 05",
-    "",
-    "",
-    "Centena",
-    "",
-    "",
-    "304*** 3,00 reais"
-]
-```
-
-### map()
-
-Remove espaços em branco no início e no final das linhas.
-
-### filter()
-
-Remove as linhas vazias:
-
-```javascript
-[
-    "Lista número 05",
-    "Centena",
-    "304*** 3,00 reais"
-]
-```
-
-Agora fica muito mais fácil percorrer as informações.
-
----
-
-## O for
-
-```javascript
-for (const line of lines)
-```
-
-Ele percorre linha por linha:
-
-```javascript
-line = "Lista número 05"
-
-↓
-
-line = "Centena"
-
-↓
-
-line = "304*** 3,00 reais"
-```
-
----
-
-## Pegando o número da lista
-
-```javascript
-const number = line.match(/\d+/);
-```
-
-Entrada:
-
-```text
-Lista número 05
-```
-
-Saída:
-
-```text
-05
-```
-
-Então fazemos:
-
-```javascript
-result.lista = 5;
-```
-
----
-
-## Identificando a seção
-
-Quando encontra:
-
-```text
-Centena
-```
-
-o parser faz:
-
-```javascript
-currentSection = "centena";
-```
-
-Quando encontra:
-
-```text
-Milhar
-```
-
-faz:
-
-```javascript
-currentSection = "milhar";
-```
+Se precisar testar apenas o parser e o PDF, chame `processList(message)` diretamente em `main.js` com uma string de exemplo.
 
 Assim sabemos em qual array salvar os números.
 

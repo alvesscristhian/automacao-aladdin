@@ -4,6 +4,7 @@
   "description": "O fluxo completo do sistema é o seguinte:",
   "main": "main.js",
   "scripts": {
+    "start": "node main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -24,6 +25,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "pdfkit": "^0.19.1",
+    "qrcode-terminal": "^0.12.0",
     "sqlite3": "^6.0.1"
   }
 }
