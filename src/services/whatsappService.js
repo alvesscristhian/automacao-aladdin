@@ -17,16 +17,16 @@ const authFolder = path.resolve('./auth_info');
 // Função de log para deixar as mensagens no terminal consistentes.
 const log = (message) => console.log(`[Aladdin WhatsApp] ${message}`);
 
-// Número autorizado para receber e processar as mensagens do bot.
-// Ajuste aqui para trocar o destinatário permitido.
-const ALLOWED_WHATSAPP_NUMBER = '5513988408052';
+// ID do WhatsApp liberado para conversar com o bot.
+// O valor real vindo do Baileys pode chegar como "130442653130811@lid".
+const ALLOWED_WHATSAPP_ID = '130442653130811@lid';
 
-function normalizeWhatsAppNumber(jid = '') {
-  return jid.replace(/[^0-9]/g, '');
+function normalizeWhatsAppId(jid = '') {
+  return String(jid || '').trim().toLowerCase();
 }
 
 function isAllowedSender(jid = '') {
-  return normalizeWhatsAppNumber(jid) === ALLOWED_WHATSAPP_NUMBER;
+  return normalizeWhatsAppId(jid) === ALLOWED_WHATSAPP_ID;
 }
 
 async function startWhatsApp() {
