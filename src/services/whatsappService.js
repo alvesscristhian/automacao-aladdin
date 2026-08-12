@@ -17,6 +17,18 @@ const authFolder = path.resolve('./auth_info');
 // Função de log para deixar as mensagens no terminal consistentes.
 const log = (message) => console.log(`[Aladdin WhatsApp] ${message}`);
 
+// Número autorizado para receber e processar as mensagens do bot.
+// Ajuste aqui para trocar o destinatário permitido.
+const ALLOWED_WHATSAPP_NUMBER = '5513988408052';
+
+function normalizeWhatsAppNumber(jid = '') {
+  return jid.replace(/[^0-9]/g, '');
+}
+
+function isAllowedSender(jid = '') {
+  return normalizeWhatsAppNumber(jid) === ALLOWED_WHATSAPP_NUMBER;
+}
+
 async function startWhatsApp() {
   // Carrega a sessão do WhatsApp a partir de arquivos locais.
   // Se a pasta auth_info não existir, o Baileys cria automaticamente.
@@ -93,6 +105,11 @@ async function startWhatsApp() {
       msg.message?.imageMessage?.caption;
 
     if (!text || !sender) return;
+
+    if (!isAllowedSender(sender)) {
+      log(`Mensagem ignorada de ${sender}. Número não autorizado.`);
+      return;
+    }
 
     try {
       log(`Mensagem recebida de ${sender}`);
