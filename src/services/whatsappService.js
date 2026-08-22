@@ -1,7 +1,8 @@
 const path = require('path');
 const fs = require('fs');
 const pino = require('pino');
-const qrcode = require('qrcode-terminal');
+// O qrcode-terminal pode ser mantido ou removido, pois não será mais usado na tela
+const qrcode = require('qrcode-terminal'); 
 const {
   default: makeWASocket,
   useMultiFileAuthState,
@@ -11,6 +12,10 @@ const {
 } = require('@whiskeysockets/baileys');
 const processList = require('../controllers/listController');
 
+// 👇 COLOQUE AQUI O NÚMERO DO BOT (DDI + DDD + NÚMERO)
+// Exemplo: 5513999999999
+const BOT_PHONE_NUMBER = '5513988372703';
+
 // Diretório local onde as credenciais de sessão do WhatsApp são armazenadas.
 const authFolder = path.resolve('./auth_info');
 
@@ -18,7 +23,6 @@ const authFolder = path.resolve('./auth_info');
 const log = (message) => console.log(`[Aladdin WhatsApp] ${message}`);
 
 // ID do WhatsApp liberado para conversar com o bot.
-// O valor real vindo do Baileys pode chegar como "130442653130811@lid".
 const ALLOWED_WHATSAPP_ID = '130442653130811@lid';
 
 function normalizeWhatsAppId(jid = '') {
@@ -30,18 +34,34 @@ function isAllowedSender(jid = '') {
 }
 
 async function startWhatsApp() {
-  // Carrega a sessão do WhatsApp a partir de arquivos locais.
-  // Se a pasta auth_info não existir, o Baileys cria automaticamente.
   const { state, saveCreds } = await useMultiFileAuthState(authFolder);
   const { version } = await fetchLatestBaileysVersion();
 
-  // Cria o socket do WhatsApp com logging minimalista e sem histórico antigo.
+  // Cria o socket com as novas configurações para Pareamento
   const sock = makeWASocket({
     logger: pino({ level: 'silent' }),
     auth: state,
     version,
     syncFullHistory: false,
+    printQRInTerminal: false, // Desliga o QR Code visual no terminal
+    browser: ['Ubuntu', 'Chrome', '20.0.04'], // Mascara o acesso para evitar bloqueios da VM
   });
+
+  // 👇 Lógica do Código de Pareamento
+  if (!sock.authState.creds.registered) {
+    setTimeout(async () => {
+      try {
+        const code = await sock.requestPairingCode(BOT_PHONE_NUMBER);
+        log('====================================================');
+        log(`CÓDIGO DE PAREAMENTO: ${code}`);
+        log('Vá no WhatsApp do celular > Aparelhos Conectados');
+        log('Selecione "Conectar usando número de telefone" e digite o código acima.');
+        log('====================================================');
+      } catch (error) {
+        log(`Erro ao solicitar código de pareamento: ${error.message}`);
+      }
+    }, 3000); // Aguarda 3s para garantir que o socket inicializou
+  }
 
   // Salva credenciais sempre que elas forem atualizadas.
   sock.ev.on('creds.update', saveCreds);
@@ -49,11 +69,9 @@ async function startWhatsApp() {
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
 
-    // Quando o QR é gerado, mostramos no terminal para o usuário escanear.
+    // Ajustado para não gerar o QR no terminal, mas avisar que está aguardando
     if (qr) {
-      log('QR code gerado. Escaneie com o WhatsApp:');
-      qrcode.generate(qr, { small: true });
-      log('Aguardando leitura do QR...');
+      log('Aguardando a inserção do código de pareamento no aplicativo...');
     }
 
     if (connection === 'connecting') {
@@ -68,7 +86,7 @@ async function startWhatsApp() {
     if (connection === 'close') {
       const status = lastDisconnect?.error?.output?.statusCode;
       if (status === DisconnectReason.loggedOut) {
-        log('Logout detectado. Reiniciando sessão para gerar novo QR.');
+        log('Logout detectado. Reiniciando sessão para novo pareamento.');
         try {
           fs.rmSync(authFolder, { recursive: true, force: true });
           log('auth_info removido com sucesso. Reiniciando para novo login...');
