@@ -85,15 +85,27 @@ async function startWhatsApp() {
     // Quando a conexão fecha, tratamos logout ou erro de reconexão.
     if (connection === 'close') {
       const status = lastDisconnect?.error?.output?.statusCode;
+      
+      // Erro 440 (Conflict) ou 515 (Restart Required)
+      if (status === 440 || status === 515) {
+        log(`Erro de conflito ou reinicialização (${status}). Aguardando 5s para reconectar...`);
+        setTimeout(() => startWhatsApp(), 5000);
+        return;
+      }
+
       if (status === DisconnectReason.loggedOut) {
-        log('Logout detectado. Reiniciando sessão para novo pareamento.');
+        log('Logout detectado. Parando os eventos e limpando credenciais...');
+        
+        // Removemos os listeners para o Baileys parar de tentar salvar no arquivo deletado
+        sock.ev.removeAllListeners(); 
+        
         try {
           fs.rmSync(authFolder, { recursive: true, force: true });
           log('auth_info removido com sucesso. Reiniciando para novo login...');
         } catch (err) {
           log(`Falha ao remover auth_info: ${err.message}`);
         }
-        setTimeout(() => startWhatsApp(), 1000);
+        setTimeout(() => startWhatsApp(), 2000);
       } else {
         log(`Conexão fechada (${status || 'sem status'}). Tentando reconectar em 2 segundos...`);
         setTimeout(() => startWhatsApp(), 2000);
