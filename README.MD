@@ -70,6 +70,18 @@ Milhar
 6919*** 10,00 reais
 ```
 
+Também são aceitas listas de terno de grupo:
+
+```text
+Lista número 04
+
+TERNO DE GRUPO
+100,00 reais *** Camelo/Macaco/Vaca
+10,00 reais *** Coelho/Macaco/Pavão
+```
+
+Cada linha deve conter um valor, três animais separados por `/` e pode terminar com ponto.
+
 ## O que acontece depois
 
 - o bot lê a mensagem recebida via WhatsApp
@@ -278,6 +290,8 @@ Ele recebe:
     centena: [...],
 
     milhar: [...],
+
+    ternoGrupo: [...],
 
     total: 29
 }

@@ -28,6 +28,26 @@ function writeGroupedItems(doc, items) {
     });
 }
 
+function writeGroupedGroups(doc, items) {
+    groupByValue(items).forEach((group, value) => {
+        doc.text(`Valor: R$ ${value.toFixed(2)}`);
+
+        group.forEach((item) => {
+            doc.text(`  (${item.group})`);
+        });
+
+        doc.moveDown(0.5);
+    });
+}
+
+function writeSection(doc, title, items, writer) {
+    if (items.length === 0) return;
+
+    doc.text(title);
+    writer(doc, items);
+    doc.moveDown();
+}
+
 module.exports = function generatePDF(data) {
     return new Promise((resolve, reject) => {
         const doc = new PDFDocument();
@@ -50,15 +70,14 @@ module.exports = function generatePDF(data) {
         doc.moveDown();
 
         doc.fontSize(14);
-        doc.text('CENTENA');
-        writeGroupedItems(doc, data.centena);
-
-        doc.moveDown();
-
-        doc.text('MILHAR');
-        writeGroupedItems(doc, data.milhar);
-
-        doc.moveDown();
+        writeSection(doc, 'CENTENA', data.centena, writeGroupedItems);
+        writeSection(doc, 'MILHAR', data.milhar, writeGroupedItems);
+        writeSection(
+            doc,
+            'TERNO DE GRUPO',
+            data.ternoGrupo || [],
+            writeGroupedGroups,
+        );
 
         doc.text('--------------------------------');
 
