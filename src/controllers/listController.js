@@ -14,6 +14,8 @@ async function processList(message) {
         parsed.milhar,
     );
 
+    parsed.ternoGrupo = parsed.ternoGrupo || [];
+
     parsed.total = calculateTotal(parsed);
 
     const pdfPath = await generatePDF(parsed);

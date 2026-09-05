@@ -3,6 +3,7 @@ module.exports = function parseMessage(message) {
         lista: null,
         centena: [],
         milhar: [],
+        ternoGrupo: [],
     };
 
     const lines = message
@@ -43,6 +44,32 @@ module.exports = function parseMessage(message) {
         // MILHAR
         if (normalizedLine === 'milhar' || normalizedLine.includes('milhar')) {
             currentSection = 'milhar';
+            continue;
+        }
+
+        // TERNO DE GRUPO: 100,00 reais *** Camelo/Macaco/Vaca
+        if (normalizedLine.includes('terno de grupo')) {
+            currentSection = 'ternoGrupo';
+            continue;
+        }
+
+        const groupMatch = line.match(
+            /^([\d.,]+)\s+reais?\s+\*+\s*(.+?)\s*\.?$/i,
+        );
+
+        if (currentSection === 'ternoGrupo' && groupMatch) {
+            const group = groupMatch[2]
+                .split('/')
+                .map((animal) => animal.trim())
+                .filter(Boolean);
+
+            if (group.length === 3) {
+                result.ternoGrupo.push({
+                    group: group.join('/'),
+                    value: Number(groupMatch[1].replace(',', '.')),
+                });
+            }
+
             continue;
         }
 
