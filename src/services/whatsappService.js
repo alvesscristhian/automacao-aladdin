@@ -14,7 +14,7 @@ const processList = require('../controllers/listController');
 
 // 👇 COLOQUE AQUI O NÚMERO DO BOT (DDI + DDD + NÚMERO)
 // Exemplo: 5513999999999
-const BOT_PHONE_NUMBER = '5513996918255';
+const BOT_PHONE_NUMBER = '5513996918052';
 
 // Diretório local onde as credenciais de sessão do WhatsApp são armazenadas.
 const authFolder = path.resolve('./auth_info');
