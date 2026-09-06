@@ -54,11 +54,12 @@ module.exports = function parseMessage(message) {
         }
 
         const groupMatch = line.match(
-            /^([\d.,]+)\s+reais?\s+\*+\s*(.+?)\s*\.?$/i,
+            /^([\d.,]+)\s+reais?\s+\*+\s*([^/\s]+\s*\/\s*[^/\s]+\s*\/\s*[^/\s]+)\s*\.?$/i,
         );
 
-        if (currentSection === 'ternoGrupo' && groupMatch) {
+        if (groupMatch) {
             const group = groupMatch[2]
+                .replace(/[.,]$/, '')
                 .split('/')
                 .map((animal) => animal.trim())
                 .filter(Boolean);

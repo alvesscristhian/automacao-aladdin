@@ -144,6 +144,11 @@ async function startWhatsApp() {
     try {
       log(`Mensagem recebida de ${sender}`);
       const result = await processList(text);
+      log(
+        `Lista ${result.data.lista || 'sem número'} processada: ` +
+        `${result.data.ternoGrupo.length} ternos | ` +
+        `Total: R$ ${result.data.total.toFixed(2)}`,
+      );
 
       if (result.success && result.pdfPath) {
         await sendPdf(sender, result.pdfPath, result.data.total, sock);
