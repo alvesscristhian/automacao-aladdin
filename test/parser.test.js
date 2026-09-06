@@ -38,3 +38,26 @@ Milhar
     assert.deepEqual(parsed.ternoGrupo, []);
     assert.equal(calculateTotal(parsed), 13);
 });
+
+test('parses multiline terno de grupo entries', () => {
+    const parsed = parseMessage(`Lista número 05
+
+Terno de grupo
+
+100,00 reais ***
+Macaco/Jacaré/Vaca
+
+100,00 reais ***
+Vaca/Cachorro/Cavalo
+
+Total da lista número 05.
+
+200,00 reais`);
+
+    assert.equal(parsed.lista, 5);
+    assert.deepEqual(parsed.ternoGrupo, [
+        { group: 'Macaco/Jacaré/Vaca', value: 100 },
+        { group: 'Vaca/Cachorro/Cavalo', value: 100 },
+    ]);
+    assert.equal(calculateTotal(parsed), 200);
+});

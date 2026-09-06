@@ -12,12 +12,39 @@ module.exports = function parseMessage(message) {
         .filter((line) => line !== '');
 
     let currentSection = null;
+    let pendingGroupValue = null;
 
     for (const line of lines) {
         const normalizedLine = line.toLowerCase();
 
+        const groupOnlyMatch = line.match(
+            /^([^/\s]+\s*\/\s*[^/\s]+\s*\/\s*[^/\s]+)\s*\.?$/i,
+        );
+
+        if (pendingGroupValue !== null && groupOnlyMatch) {
+            const group = groupOnlyMatch[1]
+                .replace(/[.,]$/, '')
+                .split('/')
+                .map((animal) => animal.trim())
+                .filter(Boolean);
+
+            if (group.length === 3) {
+                result.ternoGrupo.push({
+                    group: group.join('/'),
+                    value: pendingGroupValue,
+                });
+            }
+
+            pendingGroupValue = null;
+            continue;
+        }
+
+        if (pendingGroupValue !== null) {
+            pendingGroupValue = null;
+        }
+
         // Lista número XX ou "Centenas - lista 3 / A"
-        if (normalizedLine.includes('lista')) {
+        if (normalizedLine.includes('lista') && !normalizedLine.includes('total')) {
             const number = line.match(/\d+/);
 
             if (number) {
@@ -71,6 +98,17 @@ module.exports = function parseMessage(message) {
                 });
             }
 
+            continue;
+        }
+
+        const groupValueOnlyMatch = line.match(
+            /^([\d.,]+)\s+reais?\s+\*+\s*$/i,
+        );
+
+        if (groupValueOnlyMatch) {
+            pendingGroupValue = Number(
+                groupValueOnlyMatch[1].replace(',', '.'),
+            );
             continue;
         }
 
