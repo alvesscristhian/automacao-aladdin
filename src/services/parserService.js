@@ -1,6 +1,16 @@
+// Detecta a seção (dezena/centena/milhar) pelo número de dígitos
+function getSecaoByDigitos(numero) {
+    const digitCount = numero.replace(/\*/g, '').length;
+    if (digitCount === 2) return 'dezena';
+    if (digitCount === 3) return 'centena';
+    if (digitCount === 4) return 'milhar';
+    return null;
+}
+
 module.exports = function parseMessage(message) {
     const result = {
         lista: null,
+        dezena: [],
         centena: [],
         milhar: [],
         ternoGrupo: [],
@@ -50,8 +60,9 @@ module.exports = function parseMessage(message) {
             if (number) {
                 result.lista = Number(number[0]);
             }
-
-            if (normalizedLine.includes('centena')) {
+            if (normalizedLine.includes('dezena')) {
+                currentSection = 'dezena';
+            } else if (normalizedLine.includes('centena')) {
                 currentSection = 'centena';
             } else if (normalizedLine.includes('milhar')) {
                 currentSection = 'milhar';
@@ -59,6 +70,12 @@ module.exports = function parseMessage(message) {
                 currentSection = 'centena';
             }
 
+            continue;
+        }
+
+        // DEZENA
+        if (normalizedLine === 'dezena' || normalizedLine.includes('dezena')) {
+            currentSection = 'dezena';
             continue;
         }
 
@@ -120,6 +137,7 @@ module.exports = function parseMessage(message) {
 
         if (match) {
             const number = match[1];
+            const digitCount = number.replace(/\*/g, '').length;
 
             const value = Number(
                 match[2].replace(',', '.')
@@ -130,11 +148,17 @@ module.exports = function parseMessage(message) {
                 value,
             };
 
-            if (currentSection === 'centena') {
-                result.centena.push(item);
-            }
+            // Detecta automaticamente a seção baseado no número de dígitos
+            const secaoDetectada = getSecaoByDigitos(number);
+            
+            // Usa a seção detectada OU a seção atual (se houver cabeçalho)
+            const secaoFinal = secaoDetectada || currentSection;
 
-            if (currentSection === 'milhar') {
+            if (secaoFinal === 'dezena') {
+                result.dezena.push(item);
+            } else if (secaoFinal === 'centena') {
+                result.centena.push(item);
+            } else if (secaoFinal === 'milhar') {
                 result.milhar.push(item);
             }
         }

@@ -1,10 +1,14 @@
 function calculateTotal(data) {
-    const centenaTotal = data.centena.reduce(
+    const dezenaTotal = (data.dezena || []).reduce(
+        (acc, item) => acc + item.value, 
+        0,
+    );
+    const centenaTotal = (data.centena || []).reduce(
         (acc, item) => acc + item.value, 
         0,
     );
 
-    const milharTotal = data.milhar.reduce(
+    const milharTotal = (data.milhar || []).reduce(
         (acc, item) => acc + item.value, 
         0,
     );
@@ -14,7 +18,7 @@ function calculateTotal(data) {
         0,
     );
 
-    return centenaTotal + milharTotal + ternoGrupoTotal;
+    return dezenaTotal + centenaTotal + milharTotal + ternoGrupoTotal;
 }
 
 module.exports = calculateTotal;

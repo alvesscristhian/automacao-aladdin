@@ -6,6 +6,10 @@ const generatePDF = require('../services/pdfService');
 async function processList(message) {
     const parsed = parseMessage(message);
 
+    parsed.dezena = sortNumbers(
+        parsed.dezena,
+    );
+
     parsed.centena = sortNumbers(
         parsed.centena,
     );

@@ -70,14 +70,28 @@ module.exports = function generatePDF(data) {
         doc.moveDown();
 
         doc.fontSize(14);
-        writeSection(doc, 'CENTENA', data.centena, writeGroupedItems);
-        writeSection(doc, 'MILHAR', data.milhar, writeGroupedItems);
-        writeSection(
-            doc,
-            'TERNO DE GRUPO',
-            data.ternoGrupo || [],
-            writeGroupedGroups,
-        );
+
+        if (data.dezena.length > 0) {
+            doc.text('Dezenas:');
+            writeGroupedItems(doc, data.dezena);
+        }
+
+        if (data.centena.length > 0) {
+            doc.text('Centenas:');
+            writeGroupedItems(doc, data.centena);
+        }
+
+        if (data.milhar.length > 0) {
+            doc.text('Milhares:');
+            writeGroupedItems(doc, data.milhar);
+        }
+
+        if (data.ternoGrupo && data.ternoGrupo.length > 0) {
+            doc.text('Ternos de Grupo:');
+            writeGroupedGroups(doc, data.ternoGrupo);
+        }
+
+        doc.moveDown();
 
         doc.text('--------------------------------');
 
