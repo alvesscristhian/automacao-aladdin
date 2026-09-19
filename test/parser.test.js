@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const parseMessage = require('../src/services/parserService');
 const calculateTotal = require('../src/services/totalService');
+const { mergeParsedLists } = require('../src/services/listMergeService');
 
 test('parses terno de grupo entries and includes them in total', () => {
     const parsed = parseMessage(`LISTA NÚMERO 04
@@ -60,4 +61,42 @@ Total da lista número 05.
         { group: 'Vaca/Cachorro/Cavalo', value: 100 },
     ]);
     assert.equal(calculateTotal(parsed), 200);
+});
+
+test('merges repeated numbers from different lists into one item with total value', () => {
+    const first = parseMessage(`Lista número 01
+
+Dezena
+13*** 15,00 reais`);
+
+    const second = parseMessage(`Lista número 02
+
+Dezena
+13*** 85,00 reais`);
+
+    const merged = mergeParsedLists(first, second);
+
+    assert.deepEqual(merged.dezena, [{ number: '13***', value: 100 }]);
+    assert.equal(merged.total, 100);
+});
+
+test('merges repeated ternos and avoids duplicated group names in the same PDF', () => {
+    const first = parseMessage(`Lista número 03
+
+Terno de grupo
+
+100,00 reais ***
+Camelo/Macaco/Vaca`);
+
+    const second = parseMessage(`Lista número 04
+
+Terno de grupo
+
+100,00 reais ***
+Camelo/Macaco/Vaca`);
+
+    const merged = mergeParsedLists(first, second);
+
+    assert.deepEqual(merged.ternoGrupo, [{ group: 'Camelo/Macaco/Vaca', value: 200 }]);
+    assert.equal(merged.total, 200);
 });

@@ -11,6 +11,10 @@ const {
   proto,
 } = require('@whiskeysockets/baileys');
 const processList = require('../controllers/listController');
+const parseMessage = require('./parserService');
+const { mergeParsedLists } = require('./listMergeService');
+const generatePDF = require('./pdfService');
+const calculateTotal = require('./totalService');
 
 // 👇 COLOQUE AQUI O NÚMERO DO BOT (DDI + DDD + NÚMERO)
 // Exemplo: 5513999999999
@@ -32,6 +36,51 @@ function normalizeWhatsAppId(jid = '') {
 function isAllowedSender(jid = '') {
   return normalizeWhatsAppId(jid) === ALLOWED_WHATSAPP_ID;
 }
+
+function normalizeChoice(value = '') {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const yesValues = [
+    'sim', 's', 'si', 'claro', 'quero', 'ok', 'okay', 'certeza', 'confirmo', 'positivo',
+  ];
+
+  const noValues = [
+    'nao', 'n', 'não', 'na', 'not', 'cancelar', 'cancel', 'negativo', 'deixa', 'não quero', 'nao quero',
+  ];
+
+  if (yesValues.includes(normalized)) return 'sim';
+  if (noValues.includes(normalized)) return 'nao';
+
+  return null;
+}
+
+function hasListData(parsed = {}) {
+  if (!parsed) return false;
+
+  const hasSections =
+    (parsed.dezena && parsed.dezena.length > 0) ||
+    (parsed.centena && parsed.centena.length > 0) ||
+    (parsed.milhar && parsed.milhar.length > 0) ||
+    (parsed.ternoGrupo && parsed.ternoGrupo.length > 0);
+
+  return Boolean(parsed.lista !== null && parsed.lista !== undefined) || hasSections;
+}
+
+async function handleCompletedList(sender, parsed, sock) {
+  const ready = {
+    ...parsed,
+    total: calculateTotal(parsed),
+  };
+
+  const pdfPath = await generatePDF(ready);
+  await sendPdf(sender, pdfPath, ready.total, sock);
+}
+
+const pendingListMerges = new Map();
 
 async function startWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState(authFolder);
@@ -143,20 +192,61 @@ async function startWhatsApp() {
 
     try {
       log(`Mensagem recebida de ${sender}`);
-      const result = await processList(text);
+
+      const pending = pendingListMerges.get(sender);
+      if (pending && pending.step === 'awaiting_choice') {
+        const choice = normalizeChoice(text);
+
+        if (choice === 'sim') {
+          pendingListMerges.set(sender, { ...pending, step: 'awaiting_second_list' });
+          await sock.sendMessage(sender, {
+            text: 'Pode enviar a outra lista?',
+          });
+          return;
+        }
+
+        if (choice === 'nao') {
+          pendingListMerges.delete(sender);
+          await handleCompletedList(sender, pending.firstList, sock);
+          return;
+        }
+      }
+
+      if (pending && pending.step === 'awaiting_second_list') {
+        const secondList = parseMessage(text);
+
+        if (hasListData(secondList)) {
+          const merged = mergeParsedLists(pending.firstList, secondList);
+          pendingListMerges.delete(sender);
+          await handleCompletedList(sender, merged, sock);
+          return;
+        }
+      }
+
+      const parsed = parseMessage(text);
+      if (!hasListData(parsed)) {
+        return;
+      }
+
+      const firstList = {
+        ...parsed,
+        total: calculateTotal(parsed),
+      };
+
+      pendingListMerges.set(sender, {
+        firstList,
+        step: 'awaiting_choice',
+      });
+
       log(
-        `Lista ${result.data.lista || 'sem número'} processada: ` +
-        `${result.data.ternoGrupo.length} ternos | ` +
-        `Total: R$ ${result.data.total.toFixed(2)}`,
+        `Lista ${firstList.lista || 'sem número'} recebida e aguardando confirmação: ` +
+        `${firstList.ternoGrupo.length} ternos | ` +
+        `Total: R$ ${firstList.total.toFixed(2)}`,
       );
 
-      if (result.success && result.pdfPath) {
-        await sendPdf(sender, result.pdfPath, result.data.total, sock);
-      } else {
-        await sock.sendMessage(sender, {
-          text: 'Não consegui gerar o PDF. Verifique o formato da mensagem.',
-        });
-      }
+      await sock.sendMessage(sender, {
+        text: 'Você deseja somar com outra lista?',
+      });
     } catch (error) {
       console.error('Erro ao processar mensagem:', error);
       await sock.sendMessage(sender, {
