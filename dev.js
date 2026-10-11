@@ -2,15 +2,26 @@ const fs = require('fs');
 const readline = require('readline/promises');
 const processList = require('./src/controllers/listController');
 
-const exampleList = `Lista número 05
+const exampleList = `Lista número 21
 
-Centena do 1° ao 5° prêmio, 2,00 reais em cada.
 
-642***
-643***
-546***
+Centena do 2° ao 5° prêmio,  a 2,50 reais em cada. 
 
-Total da lista 30,00 reais. Nippon.`;
+
+147***
+282***
+159***
+470***
+989***
+488***
+351***
+223***
+
+
+xxxxxxxxxxxxxxxxxxxx 
+Valdir Rifa
+
+Total 80,00 reais`;
 
 async function main() {
     const filePath = process.argv[2];
