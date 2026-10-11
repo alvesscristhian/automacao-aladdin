@@ -1,6 +1,6 @@
-// Detecta a seção (dezena/centena/milhar) pelo número de dígitos
-function getSecaoByDigitos(numero) {
-    const digitCount = numero.replace(/\*/g, '').length;
+function getSectionByDigits(number) {
+    const digitCount = number.replace(/\*/g, '').length;
+
     if (digitCount === 2) return 'dezena';
     if (digitCount === 3) return 'centena';
     if (digitCount === 4) return 'milhar';
@@ -16,6 +16,31 @@ module.exports = function parseMessage(message) {
         ternoGrupo: [],
     };
 
+    function getRepeatedBet(line) {
+        const prizeRange = line.match(
+            /(\d+)\s*[º°o]?\s*(?:ao|ate|até|-)\s*(\d+)\s*[º°o]?\s*pr[eê]mios?/i,
+        );
+        const unitValue = line.match(
+            /(?:r\$\s*)?(\d+(?:[.,]\d{1,2})?)\s*(?:reais?)?\s+(?:em|para)\s+cada\b/i,
+        );
+
+        if (!prizeRange || !unitValue) {
+            return null;
+        }
+
+        const firstPrize = Number(prizeRange[1]);
+        const lastPrize = Number(prizeRange[2]);
+
+        if (lastPrize < firstPrize) {
+            return null;
+        }
+
+        return {
+            prizeCount: lastPrize - firstPrize + 1,
+            baseValue: Number(unitValue[1].replace(',', '.')),
+        };
+    }
+
     const lines = message
         .split('\n')
         .map((line) => line.trim())
@@ -23,6 +48,7 @@ module.exports = function parseMessage(message) {
 
     let currentSection = null;
     let pendingGroupValue = null;
+    let repeatedBet = null;
 
     for (const line of lines) {
         const normalizedLine = line.toLowerCase();
@@ -53,7 +79,6 @@ module.exports = function parseMessage(message) {
             pendingGroupValue = null;
         }
 
-        // Lista número XX ou "Centenas - lista 3 / A"
         if (normalizedLine.includes('lista') && !normalizedLine.includes('total')) {
             const number = line.match(/\d+/);
 
@@ -64,8 +89,10 @@ module.exports = function parseMessage(message) {
                 currentSection = 'dezena';
             } else if (normalizedLine.includes('centena')) {
                 currentSection = 'centena';
+                repeatedBet = getRepeatedBet(line);
             } else if (normalizedLine.includes('milhar')) {
                 currentSection = 'milhar';
+                repeatedBet = getRepeatedBet(line);
             } else if (currentSection === null) {
                 currentSection = 'centena';
             }
@@ -73,27 +100,27 @@ module.exports = function parseMessage(message) {
             continue;
         }
 
-        // DEZENA
         if (normalizedLine === 'dezena' || normalizedLine.includes('dezena')) {
             currentSection = 'dezena';
+            repeatedBet = null;
             continue;
         }
 
-        // CENTENA
         if (normalizedLine === 'centena' || normalizedLine.includes('centena')) {
             currentSection = 'centena';
+            repeatedBet = getRepeatedBet(line);
             continue;
         }
 
-        // MILHAR
         if (normalizedLine === 'milhar' || normalizedLine.includes('milhar')) {
             currentSection = 'milhar';
+            repeatedBet = getRepeatedBet(line);
             continue;
         }
 
-        // TERNO DE GRUPO: 100,00 reais *** Camelo/Macaco/Vaca
         if (normalizedLine.includes('terno de grupo')) {
             currentSection = 'ternoGrupo';
+            repeatedBet = null;
             continue;
         }
 
@@ -129,40 +156,47 @@ module.exports = function parseMessage(message) {
             continue;
         }
 
-        // pega:
-        // 304*** 3,00 reais
-        const regex = /(\d+\*+)\s+([\d,.]+)/;
+        const lineRepeatedBet = getRepeatedBet(line);
 
-        const match = line.match(regex);
+        if (lineRepeatedBet) {
+            repeatedBet = lineRepeatedBet;
+        }
+
+        const match = line.match(/(\d+\*+)(?:\s+([\d,.]+))?/);
 
         if (match) {
             const number = match[1];
-            const digitCount = number.replace(/\*/g, '').length;
+            const explicitValue = match[2]
+                ? Number(match[2].replace(',', '.'))
+                : null;
 
-            const value = Number(
-                match[2].replace(',', '.')
-            );
+            if (explicitValue === null && !repeatedBet) {
+                continue;
+            }
 
             const item = {
                 number,
-                value,
+                value: explicitValue !== null
+                    ? explicitValue
+                    : Number((repeatedBet.baseValue * repeatedBet.prizeCount).toFixed(2)),
             };
 
-            // Detecta automaticamente a seção baseado no número de dígitos
-            const secaoDetectada = getSecaoByDigitos(number);
-            
-            // Usa a seção detectada OU a seção atual (se houver cabeçalho)
-            const secaoFinal = secaoDetectada || currentSection;
+            if (explicitValue === null && repeatedBet) {
+                item.baseValue = repeatedBet.baseValue;
+                item.prizeCount = repeatedBet.prizeCount;
+            }
 
-            if (secaoFinal === 'dezena') {
+            const section = getSectionByDigits(number) || currentSection;
+
+            if (section === 'dezena') {
                 result.dezena.push(item);
-            } else if (secaoFinal === 'centena') {
+            } else if (section === 'centena') {
                 result.centena.push(item);
-            } else if (secaoFinal === 'milhar') {
+            } else if (section === 'milhar') {
                 result.milhar.push(item);
             }
         }
     }
 
     return result;
-}
+};

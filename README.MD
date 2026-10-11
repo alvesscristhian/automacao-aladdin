@@ -82,6 +82,12 @@ TERNO DE GRUPO
 
 Cada linha deve conter um valor, três animais separados por `/` e pode terminar com ponto.
 
+Quando a mensagem informar um intervalo de prêmios e um valor "em cada" ou
+"para cada", o sistema multiplica o valor pela quantidade de prêmios do
+intervalo. Por exemplo, "do 1º ao 5º prêmio, 2,00 reais em cada" corresponde a
+R$ 10,00 por número; "do 2º ao 5º prêmio" corresponde a quatro vezes o valor
+informado. O PDF mostra o cálculo por número.
+
 ## O que acontece depois
 
 - o bot lê a mensagem recebida via WhatsApp
@@ -90,6 +96,13 @@ Cada linha deve conter um valor, três animais separados por `/` e pode terminar
 - gera o PDF em `pdf/lista-01.pdf`
 - envia o PDF de volta como documento pelo WhatsApp
 - inclui no caption o valor total calculado
+
+## Testar geração de PDF
+
+Execute `npm run dev` para gerar um PDF de exemplo sem iniciar o WhatsApp.
+Para testar outra mensagem, salve-a em um arquivo de texto e execute
+`npm run dev -- caminho/para/lista.txt`, ou passe o conteúdo pela entrada padrão
+com `npm run dev < caminho/para/lista.txt`.
 
 ## Logs úteis
 

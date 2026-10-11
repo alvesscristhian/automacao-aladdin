@@ -21,7 +21,11 @@ function writeGroupedItems(doc, items) {
         doc.text(`Valor: R$ ${value.toFixed(2)}`);
 
         group.forEach((item) => {
-            doc.text(`  ${item.number}`);
+            const repeatedBetDetails = item.prizeCount
+                ? ` (R$ ${item.baseValue.toFixed(2)} x ${item.prizeCount} premios = R$ ${item.value.toFixed(2)})`
+                : '';
+
+            doc.text(`  ${item.number}${repeatedBetDetails}`);
         });
 
         doc.moveDown(0.5);
