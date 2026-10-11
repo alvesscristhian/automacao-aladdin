@@ -40,6 +40,49 @@ Milhar
     assert.equal(calculateTotal(parsed), 13);
 });
 
+test('parses first-prize entries and prize ranges across centena and dezena', () => {
+    const parsed = parseMessage(`Lista número 08
+
+Milhar no 1° prêmio
+1221*** 3,00 reais
+2536*** 3,00 reais
+3743*** 3,00 reais
+5268*** 3,00 reais
+8577*** 3,00 reais
+
+Centena no 1° prêmio
+221*** 3,00 reais
+536*** 3,00 reais
+743*** 3,00 reais
+268*** 3,00 reais
+577*** 3,00 reais
+
+2° ao 5° prêmio 3,00 reais em cada.
+221***
+536***
+743***
+268***
+577***
+
+Dezena do 2° ao 5° prêmio 3,00 reais em cada.
+21***
+36***
+43***
+68***
+77***`);
+
+    assert.equal(parsed.milhar.reduce((sum, item) => sum + item.value, 0), 15);
+    assert.equal(
+        parsed.centena.reduce((sum, item) => sum + item.value, 0),
+        75,
+    );
+    assert.deepEqual(
+        parsed.dezena.map(({ value }) => value),
+        [12, 12, 12, 12, 12],
+    );
+    assert.equal(calculateTotal(parsed), 150);
+});
+
 test('parses multiline terno de grupo entries', () => {
     const parsed = parseMessage(`Lista número 05
 
@@ -78,6 +121,38 @@ Dezena
 
     assert.deepEqual(merged.dezena, [{ number: '13***', value: 100 }]);
     assert.equal(merged.total, 100);
+});
+
+test('keeps all merged list numbers in their original order', () => {
+    const lists = [11, 5, 8].map((number) =>
+        parseMessage(`Lista número ${number}
+
+Dezena
+13*** 1,00 reais`),
+    );
+
+    const merged = lists.reduce(
+        (accumulated, list) => mergeParsedLists(accumulated, list),
+    );
+
+    assert.deepEqual(merged.listas, [11, 5, 8]);
+    assert.equal(merged.lista, 11);
+});
+
+test('merges numbers from more than two lists into one accumulated total', () => {
+    const lists = [15, 85, 25, 5].map((value, index) =>
+        parseMessage(`Lista número 0${index + 1}
+
+Dezena
+13*** ${value},00 reais`),
+    );
+
+    const merged = lists.reduce(
+        (accumulated, list) => mergeParsedLists(accumulated, list),
+    );
+
+    assert.deepEqual(merged.dezena, [{ number: '13***', value: 130 }]);
+    assert.equal(merged.total, 130);
 });
 
 test('merges repeated ternos and avoids duplicated group names in the same PDF', () => {

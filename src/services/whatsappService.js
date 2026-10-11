@@ -194,33 +194,43 @@ async function startWhatsApp() {
       log(`Mensagem recebida de ${sender}`);
 
       const pending = pendingListMerges.get(sender);
-      if (pending && pending.step === 'awaiting_choice') {
+      if (pending) {
         const choice = normalizeChoice(text);
 
         if (choice === 'sim') {
-          pendingListMerges.set(sender, { ...pending, step: 'awaiting_second_list' });
           await sock.sendMessage(sender, {
-            text: 'Pode enviar a outra lista?',
+            text: 'Pode enviar a próxima lista diretamente, ou responder "não" para gerar o PDF.',
           });
           return;
         }
 
         if (choice === 'nao') {
           pendingListMerges.delete(sender);
-          await handleCompletedList(sender, pending.firstList, sock);
+          await handleCompletedList(sender, pending.accumulatedList, sock);
           return;
         }
-      }
 
-      if (pending && pending.step === 'awaiting_second_list') {
-        const secondList = parseMessage(text);
+        const nextList = parseMessage(text);
 
-        if (hasListData(secondList)) {
-          const merged = mergeParsedLists(pending.firstList, secondList);
-          pendingListMerges.delete(sender);
-          await handleCompletedList(sender, merged, sock);
+        if (!hasListData(nextList)) {
+          await sock.sendMessage(sender, {
+            text: 'Não consegui identificar a lista. Envie outra lista para somar ou responda "não" para gerar o PDF.',
+          });
           return;
         }
+
+        const accumulatedList = mergeParsedLists(
+          pending.accumulatedList,
+          nextList,
+        );
+        pendingListMerges.set(sender, {
+          accumulatedList,
+        });
+
+        await sock.sendMessage(sender, {
+          text: 'Lista recebida e somada. Envie outra lista para somar ou responda "não" para gerar o PDF.',
+        });
+        return;
       }
 
       const parsed = parseMessage(text);
@@ -234,8 +244,7 @@ async function startWhatsApp() {
       };
 
       pendingListMerges.set(sender, {
-        firstList,
-        step: 'awaiting_choice',
+        accumulatedList: firstList,
       });
 
       log(
@@ -245,7 +254,7 @@ async function startWhatsApp() {
       );
 
       await sock.sendMessage(sender, {
-        text: 'Você deseja somar com outra lista?',
+        text: 'Envie outra lista para somar ou responda "não" para gerar o PDF.',
       });
     } catch (error) {
       console.error('Erro ao processar mensagem:', error);

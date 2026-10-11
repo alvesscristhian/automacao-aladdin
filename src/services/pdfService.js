@@ -18,7 +18,10 @@ function groupByValue(items) {
 
 function writeGroupedItems(doc, items) {
     groupByValue(items).forEach((group, value) => {
-        doc.text(`Valor: R$ ${value.toFixed(2)}`);
+        const groupTotal = value * group.length;
+        doc.text(
+            `Valor: R$ ${value.toFixed(2)} cada | Subtotal (${group.length}): R$ ${groupTotal.toFixed(2)}`,
+        );
 
         group.forEach((item) => {
             const repeatedBetDetails = item.prizeCount
@@ -69,35 +72,42 @@ module.exports = function generatePDF(data) {
         doc.pipe(writeStream);
 
         doc.fontSize(18);
-        doc.text(`Lista número ${data.lista}`);
+        const listNumbers = data.listas?.length
+            ? data.listas.join('/')
+            : data.lista;
+        doc.text(`Lista número ${listNumbers}`);
 
         doc.moveDown();
 
         doc.fontSize(14);
-
+        
+        // Aqui vai sair a lista de dezenas, centenas, milhares e ternos de grupo, se houverem.
         if (data.dezena.length > 0) {
             doc.text('Dezenas:');
             writeGroupedItems(doc, data.dezena);
+            doc.text('----------------------------------------------------------------');
         }
 
         if (data.centena.length > 0) {
             doc.text('Centenas:');
             writeGroupedItems(doc, data.centena);
+            doc.text('----------------------------------------------------------------');
         }
 
         if (data.milhar.length > 0) {
             doc.text('Milhares:');
             writeGroupedItems(doc, data.milhar);
+            doc.text('----------------------------------------------------------------');
         }
 
         if (data.ternoGrupo && data.ternoGrupo.length > 0) {
             doc.text('Ternos de Grupo:');
             writeGroupedGroups(doc, data.ternoGrupo);
+            doc.text('----------------------------------------------------------------');
         }
 
         doc.moveDown();
 
-        doc.text('--------------------------------');
 
         doc.text(`Total: R$ ${data.total.toFixed(2)}`);
 

@@ -102,7 +102,7 @@ module.exports = function parseMessage(message) {
 
         if (normalizedLine === 'dezena' || normalizedLine.includes('dezena')) {
             currentSection = 'dezena';
-            repeatedBet = null;
+            repeatedBet = getRepeatedBet(line);
             continue;
         }
 

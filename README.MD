@@ -88,6 +88,11 @@ intervalo. Por exemplo, "do 1º ao 5º prêmio, 2,00 reais em cada" corresponde 
 R$ 10,00 por número; "do 2º ao 5º prêmio" corresponde a quatro vezes o valor
 informado. O PDF mostra o cálculo por número.
 
+Depois de receber uma lista, o bot pergunta se deseja somar outra. Responda
+"sim" e envie a próxima lista; o bot continuará perguntando após cada soma.
+Responda "não" para gerar e receber o PDF com todas as listas acumuladas. O
+cabeçalho identifica as listas somadas, por exemplo: `Lista número 11/5/8`.
+
 ## O que acontece depois
 
 - o bot lê a mensagem recebida via WhatsApp

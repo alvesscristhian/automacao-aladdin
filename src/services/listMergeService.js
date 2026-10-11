@@ -50,6 +50,7 @@ function mergeGroupSection(items = []) {
 function mergeParsedLists(...lists) {
     const base = {
         lista: null,
+        listas: [],
         dezena: [],
         centena: [],
         milhar: [],
@@ -58,6 +59,18 @@ function mergeParsedLists(...lists) {
 
     for (const list of lists) {
         if (!list) continue;
+
+        const listNumbers = list.listas?.length
+            ? list.listas
+            : list.lista !== null && list.lista !== undefined
+                ? [list.lista]
+                : [];
+
+        for (const number of listNumbers) {
+            if (!base.listas.some((existing) => String(existing) === String(number))) {
+                base.listas.push(number);
+            }
+        }
 
         if (base.lista === null && list.lista !== null && list.lista !== undefined) {
             base.lista = list.lista;
